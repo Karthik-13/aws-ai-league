@@ -37,6 +37,9 @@ class LangChainDatasetPipeline:
         self.questions_file = os.path.join(output_dir, f"questions_{safe_topic}_{timestamp}.jsonl")
         self.deduplicated_file = os.path.join(output_dir, f"questions_deduplicated_{safe_topic}_{timestamp}.jsonl")
         self.final_file = os.path.join(output_dir, f"training_data_{safe_topic}_{timestamp}.jsonl")
+        
+        # Get the directory where this script is located to find other agent scripts
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
     
     def run_step(self, step_name: str, command: list) -> bool:
         """Run a pipeline step"""
@@ -73,7 +76,7 @@ class LangChainDatasetPipeline:
         """Step 1: Generate questions using LangChain"""
         command = [
             sys.executable,
-            "langchain_question_generator.py",
+            os.path.join(self.script_dir, "langchain_question_generator.py"),
             self.topic,
             "--num-questions", str(self.num_questions),
             "--batch-size", str(batch_size),
@@ -96,7 +99,7 @@ class LangChainDatasetPipeline:
         """Step 2: Deduplicate using LangChain embeddings"""
         command = [
             sys.executable,
-            "langchain_question_deduplicator.py",
+            os.path.join(self.script_dir, "langchain_question_deduplicator.py"),
             self.questions_file,
             "--threshold", str(threshold),
             "--method", method,
@@ -114,7 +117,7 @@ class LangChainDatasetPipeline:
         """Step 3: Generate responses using LangChain"""
         command = [
             sys.executable,
-            "langchain_response_generator.py",
+            os.path.join(self.script_dir, "langchain_response_generator.py"),
             self.deduplicated_file,
             "--chunk-size", str(chunk_size),
             "--temperature", str(temperature),

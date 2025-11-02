@@ -71,7 +71,7 @@ The pipeline consists of three specialized agents:
 
 ```bash
 # Clone or download the repository
-cd aileague
+cd aws-ai-league/agents
 
 # Install dependencies
 pip install -r requirements_langchain.txt

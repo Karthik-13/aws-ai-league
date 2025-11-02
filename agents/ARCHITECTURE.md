@@ -170,7 +170,7 @@ Topic: "customer service"
 ## File Structure
 
 ```
-project/
+agents/
 ├── langchain_question_generator.py     # Agent 1
 ├── langchain_question_deduplicator.py  # Agent 2
 ├── langchain_response_generator.py     # Agent 3
@@ -182,15 +182,19 @@ project/
 ├── QUICKSTART.md                      # Quick start guide
 ├── ARCHITECTURE.md                    # This file
 │
-└── output/                            # Generated files
-    ├── questions_topic_timestamp.jsonl
-    ├── questions_topic_timestamp_stats.json
-    ├── questions_deduplicated_topic_timestamp.jsonl
-    ├── questions_deduplicated_..._dedup_stats.json
-    ├── training_data_topic_timestamp.jsonl  ✨
-    ├── training_data_..._response_stats.json
-    ├── training_data_..._improved.jsonl      (optional)
-    └── training_data_..._improved_stats.json (optional)
+├── output/                            # Generated files during pipeline runs
+│   ├── questions_topic_timestamp.jsonl
+│   ├── questions_topic_timestamp_stats.json
+│   ├── questions_deduplicated_topic_timestamp.jsonl
+│   ├── questions_deduplicated_..._dedup_stats.json
+│   ├── training_data_topic_timestamp.jsonl  ✨
+│   ├── training_data_..._response_stats.json
+│   ├── training_data_..._improved.jsonl      (optional)
+│   └── training_data_..._improved_stats.json (optional)
+│
+└── final_datasets/                    # Finalized datasets ready for use
+    ├── dataset-*.jsonl
+    └── ...
 ```
 
 ## Agent Details
