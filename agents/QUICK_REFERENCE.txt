@@ -1,0 +1,234 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                  QUICK REFERENCE CARD                                     ║
+║            LLM Fine-tuning Dataset Generation                            ║
+║                    (LangChain Implementation)                              ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ QUICK START
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Install dependencies
+pip install -r requirements_langchain.txt
+
+# Configure AWS
+aws configure
+
+# Run complete pipeline using config.yaml (recommended)
+cd agents
+python langchain_pipeline.py --config config.yaml
+
+# Run complete pipeline with CLI arguments
+python agents/langchain_pipeline.py "your topic" --num-questions 100
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 COMMON COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+USING CONFIG.YAML (RECOMMENDED):
+  cd agents
+  python langchain_pipeline.py --config config.yaml
+  python langchain_question_generator.py --config config.yaml
+  python langchain_question_deduplicator.py --config config.yaml
+  python langchain_response_generator.py --config config.yaml
+  python langchain_response_improver.py --config config.yaml
+
+WITH CLI ARGUMENTS:
+  python agents/langchain_pipeline.py "topic" --num-questions 500
+
+WITH CATEGORIES:
+  python agents/langchain_pipeline.py "topic" -n 1000 \
+    --categories "cat1,cat2,cat3"
+
+CUSTOM PROMPTS:
+  python agents/langchain_pipeline.py "topic" -n 300 \
+    --question-system-prompt "Generate X questions" \
+    --response-system-prompt "Provide Y answers"
+
+NO CONTEXT (FASTER):
+  python agents/langchain_pipeline.py "topic" -n 500 --no-context
+
+PARALLEL PROCESSING:
+  python agents/langchain_response_generator.py questions.jsonl \
+    --max-workers 3
+
+RESUME FROM INTERRUPTION:
+  python agents/langchain_response_generator.py questions.jsonl \
+    --resume-from output/training_data_partial.jsonl
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 INDIVIDUAL AGENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+QUESTION GENERATOR:
+  python agents/langchain_question_generator.py "topic" -n 1000
+
+DEDUPLICATOR:
+  python agents/langchain_question_deduplicator.py questions.jsonl
+
+RESPONSE GENERATOR:
+  python agents/langchain_response_generator.py questions_deduplicated.jsonl
+
+RESPONSE IMPROVER (OPTIONAL):
+  python agents/langchain_response_improver.py training_data.jsonl
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 PARAMETERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+QUESTION GENERATOR:
+  --num-questions, -n      Number to generate (default: 100)
+  --batch-size, -b         Questions per batch (default: 20)
+  --temperature            Diversity 0.0-1.0 (default: 0.9)
+  --categories, -c         Comma-separated categories
+  --system-prompt, -s      Custom system prompt
+  --resume-from, -r        Resume from existing file
+  --config                 Path to config.yaml
+
+DEDUPLICATOR:
+  --threshold, -t          Similarity threshold (default: 0.85)
+  --method, -m             'threshold' or 'clustering'
+  --eps                    DBSCAN epsilon (default: 0.15)
+  --config                 Path to config.yaml
+
+RESPONSE GENERATOR:
+  --chunk-size, -c         Questions per call (default: 5)
+  --temperature            Creativity 0.0-1.0 (default: 0.7)
+  --max-tokens             Max response length (default: 2048)
+  --timeout                Request timeout seconds (default: 300)
+  --max-workers            Parallel workers (default: 1)
+  --no-context             Skip context generation
+  --system-prompt, -s      Custom system prompt
+  --resume-from, -r        Resume from partial file
+  --config                 Path to config.yaml
+
+RESPONSE IMPROVER:
+  --chunk-size, -c         Examples per call (default: 5)
+  --temperature            Lower for consistency (default: 0.3)
+  --max-tokens             Max tokens per evaluation (default: 4096)
+  --timeout                Request timeout seconds (default: 600)
+  --max-workers            Parallel workers (default: 1)
+  --fix-only               Only fix issues, don't improve good responses
+  --config                 Path to config.yaml
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 COST ESTIMATES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  100 questions:    ~$0.50
+  500 questions:    ~$2.50
+  1,000 questions:  ~$5.00
+  5,000 questions:  ~$25.00
+
+(With response improvement: add ~$2-3 per 1000 questions)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📁 OUTPUT FILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+output/
+  ├── questions_topic_timestamp.jsonl          # Generated questions
+  ├── questions_topic_timestamp_stats.json     # Generation stats
+  ├── questions_deduplicated_*.jsonl          # After deduplication
+  ├── questions_deduplicated_*_stats.json     # Dedup stats
+  ├── training_data_*.jsonl                   # FINAL OUTPUT ✨
+  ├── training_data_*_stats.json              # Response stats
+  ├── training_data_*_improved.jsonl          # Improved (optional)
+  └── training_data_*_improved_stats.json      # Improvement stats (optional)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{"instruction": "question here", "context": "", "response": "answer here"}
+
+Ready for LLM instruction fine-tuning!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚙️  CONFIG.YAML
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All agents automatically search for config.yaml in:
+  1. Current directory
+  2. agents/config.yaml
+  3. Path specified by --config argument
+  4. Environment variable AILEAGUE_CONFIG
+
+Sections in config.yaml:
+  - question:    Question generator settings
+  - dedup:       Deduplicator settings
+  - response:    Response generator settings
+  - improver:    Response improver settings (optional)
+  - pipeline:    Pipeline-specific overrides
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📖 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+START HERE:
+  → README.md               Main documentation
+  → QUICKSTART.md           Get running in 30 seconds
+
+DETAILED:
+  → README_LANGCHAIN.md     Detailed LangChain documentation
+  → ARCHITECTURE.md         System design
+  → COMPARISON.md           Implementation details
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆘 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"No credentials found"
+  → Run: aws configure
+
+"Access denied"
+  → Enable Claude models in AWS Bedrock console
+  → Check IAM permissions
+  → Verify model ID (or use inference profile ARN)
+
+"Read timeout"
+  → Increase --timeout to 600
+  → Reduce --chunk-size to 1
+  → Reduce --max-tokens
+
+"Too many duplicates"
+  → Lower --dedup-threshold to 0.80
+  → Increase --question-temperature to 0.95
+  → Use categories to guide generation
+
+"Import error"
+  → pip install -r requirements_langchain.txt
+  → Check Python version (3.8+)
+
+"Config file not found"
+  → Agents auto-discover config.yaml
+  → Or specify with --config path/to/config.yaml
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ EXAMPLE TOPICS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• "customer service for e-commerce"
+• "Python programming help and debugging"
+• "medical information for patients"
+• "legal advice for small business"
+• "financial planning and investment"
+• "cooking recipes and techniques"
+• "tech support troubleshooting"
+• "educational math tutoring"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 THAT'S IT!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You have everything needed to generate high-quality fine-tuning datasets!
+
+1. Install dependencies
+2. Configure AWS
+3. Edit config.yaml or use CLI arguments
+4. Run pipeline
+5. Start fine-tuning!
+
+For help: Read README.md or QUICKSTART.md
+
+Happy fine-tuning! 🚀

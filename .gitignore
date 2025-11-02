@@ -1,0 +1,130 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv/
+.ENV/
+.env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Output files (generated datasets and statistics)
+agents/output/
+agents/final_datasets/
+other-ai-generated-datasets/
+
+# Generated dataset files (but allow templates/examples if needed)
+*.jsonl
+*_stats.json
+*_dedup_stats.json
+*_response_stats.json
+*_improved_stats.json
+
+# Test files
+test_*.jsonl
+test_*.json
+*_test.jsonl
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+*.bak
+*.swp
+*~
+
+# AWS credentials (if stored locally)
+.aws/
+aws-credentials.json
+
+# Configuration - track config.yaml (template)
+# But ignore local config overrides
+config.local.yaml
+config.prod.yaml
+*.local.yaml
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Project-specific
+*.jsonl.bak
+*.json.bak
+

@@ -1,0 +1,468 @@
+# Unified configuration for all agents and pipelines
+#
+# Usage examples:
+# - Full pipeline:
+#     python agents/langchain_pipeline.py "ignored-if-set-here" --config config.yaml
+# - Individual agents:
+#     python agents/langchain_question_generator.py --config config.yaml
+#     python agents/langchain_question_deduplicator.py --config config.yaml
+#     python agents/langchain_response_generator.py --config config.yaml
+#     python agents/langchain_response_improver.py --config config.yaml
+#
+# All agents automatically search for config.yaml in:
+# 1. Current directory
+# 2. agents/config.yaml
+# 3. Path specified by --config argument
+# 4. Environment variable AILEAGUE_CONFIG
+
+
+############################################################
+# Global/shared settings (used by pipelines)
+############################################################
+region: "us-east-1"
+
+# Default topic and totals for pipelines
+topic: "United States citizens struggle to navigate complex government bureaucracy. 
+Confusing permit processes and licensing requirements scatter information across multiple departments and websites. 
+Long wait times and frustrating phone calls to government offices cause citizens to give up on legitimate services due to complexity, while government staff become overwhelmed with repetitive basic questions. 
+Our goal is to fine-tune a model that understands citizen needs in plain language and process messy, realistic government processes, services, regulations, bureaucracies and policies. Handle complex scenarios like \"I want to open a food truck\" or \"My neighbor's tree fell on my property\" while providing step-by-step guidance on each category of services the government provides. Make government bureaucracy actually understandable and helpful!
+As the first step, generate questions that can form the dataset that will be used to fine-tune the model."
+
+num_questions: 100
+
+# Default output directory for pipelines
+output_dir: "output"
+
+
+############################################################
+# Question Generator Agent (langchain_question_generator.py)
+############################################################
+question:
+  # Model settings
+  model_id: "anthropic.claude-3-5-sonnet-20240620-v1:0"
+  region: "us-east-1"
+  system_prompt: "You are an expert at generating diverse, high-quality, simple as well as complex questions. Your questions will be used to fine-tune a model to help citizens of the United States of America navigate the complexities of the US government and its services. You will be given a list of categories and you will need to generate questions that are relevant to the categories."      
+  
+  # Generation settings
+  topic: "United States citizens struggle to navigate complex government bureaucracy. Confusing permit processes and licensing requirements scatter information across multiple departments and websites. Long wait times and frustrating phone calls to government offices cause citizens to give up on legitimate services due to complexity, while government staff become overwhelmed with repetitive basic questions. Our goal is to fine-tune a model that understands citizen needs in plain language and process messy, realistic government processes, services, regulations, bureaucracies and policies. Handle complex scenarios like \"I want to open a food truck\" or \"My neighbor's tree fell on my property\" while providing step-by-step guidance on each category of services the government provides. Make government bureaucracy actually understandable and helpful! As the first step, generate questions that can form the dataset that will be used to fine-tune the model."
+  num_questions: 100
+  batch_size: 20
+  temperature: 0
+  
+  # Categories (can be list or comma-separated string)
+  categories:
+    - licenses
+    - permits
+    - claims
+    - taxes
+    - disputes
+    - complaints
+    - inquiries
+    - occupational licenses
+    - occupational permits
+    - aids
+    - benefits
+    - laws and legal issues
+    - disaster relief
+    - disability services
+    - education
+    - small business
+    - labor laws and unemployment
+    - military and veterans
+    - appeals
+
+  
+  # File I/O
+  output: "output/question_2.jsonl"          # Output file path (relative to script dir)
+  resume_from: "output/question_1.jsonl"     # Resume from existing file (optional)
+
+
+############################################################
+# Question Deduplicator Agent (langchain_question_deduplicator.py)
+############################################################
+dedup:
+  # Model settings
+  model_id: "amazon.titan-embed-text-v2:0"
+  region: "us-east-1"
+  
+  # Deduplication settings
+  threshold: 0.88        # Cosine similarity threshold (used when method = threshold)
+  method: "threshold"    # "threshold" or "clustering"
+  eps: 0.15              # DBSCAN epsilon (only used when method = clustering)
+  
+  # File I/O
+  input_file: "output/question_1.jsonl"  # Input file path (relative to script dir)
+  output: "output/question_1_deduplicated.jsonl"  # Output file path (empty = auto-generate '<input>_deduplicated.jsonl')
+
+
+############################################################
+# Response Generator Agent (langchain_response_generator.py)
+############################################################
+response:
+  # Model settings
+  model_id: "anthropic.claude-3-5-sonnet-20240620-v1:0"
+  region: "us-east-1"
+  system_prompt: "You are an expert government service representative helping citizens understand US government processes and procedures. Your responses must be accurate, complete, helpful, and professional."
+  
+  # Generation settings
+  topic: "United States citizens struggle to navigate complex government bureaucracy. Confusing permit processes and licensing requirements scatter information across multiple departments and websites. Long wait times and frustrating phone calls to government offices cause citizens to give up on legitimate services due to complexity, while government staff become overwhelmed with repetitive basic questions. Our goal is to fine-tune a model that understands citizen needs in plain language and process messy, realistic government processes, services, regulations, bureaucracies and policies. Handle complex scenarios like \"I want to open a food truck\" or \"My neighbor's tree fell on my property\" while providing step-by-step guidance on each category of services the government provides. Make government bureaucracy actually understandable and helpful! As the first step, generate questions that can form the dataset that will be used to fine-tune the model."
+  chunk_size: 1
+  temperature: 0.3
+  max_tokens: 4096
+  timeout: 600              # Request timeout in seconds (default: 600 / 10 minutes for large chunks)
+  max_workers: 3            # Number of parallel workers (1 = sequential, 2+ = parallel)
+  no_context: false       # true -> omit context; false -> generate context
+  
+  # Custom requirements for response generation prompt (optional - uses default if not specified)
+  # Can be multi-line string or single string. If not provided, uses the default 8 detailed requirements
+  requirements: |      # Leave empty to use default, or provide custom requirements text
+    Your response will be stored in a JSONL file as plain text, so format appropriately for text-based storage and readability.
+
+    ## Response Requirements
+
+    ### Structure (REQUIRED)
+    Every response must include these sections in order:
+    1. **Direct Answer** (1-2 sentences): Immediately answer the citizen's question
+    2. **Eligibility and Requirements**: What the citizen needs (brief bullet list)
+    3. **Step-by-Step Process**: Clear numbered instructions (4-7 key steps)
+    4. **Timeline** (1 sentence): How long it takes
+    5. **Contact Information**: Phone, website (no placeholders)
+
+    Optional sections (add only if valuable):
+    - **Alternative Options**: Other ways to complete the process
+    - **Important Notes**: Critical warnings or common mistakes
+
+    ### Length Guidelines
+    - Target: 200-450 words
+    - Minimum: 200 words (to ensure basic completeness)
+    - Maximum: 450 words (strict limit - no exceptions)
+    - Be concise but thorough - prioritize essential information
+
+    ## Quality Standards
+
+    ### Correctness & Completeness
+
+    **Be Accurate and Verifiable:**
+    - NEVER include placeholder contact information like "[Your State]", "555-XXX-XXXX", "[county]@gov", or "XXX-XXX-XXXX"
+    - NEVER make up specific fees, hours, or deadlines unless you are certain they are universally accurate
+    - For variable information, use qualifying language:
+      - GOOD: "Fees typically range from $50-$200, check locally for exact amounts"
+      - BAD: "The fee is $150"
+      - GOOD: "Processing typically takes 30-60 days"
+      - BAD: "Processing takes exactly 45 days"
+    - Include essential information: eligibility, core steps, timeline, contact method
+    - Address the most common scenario; mention major exceptions if space allows
+
+    **Handle Geographic Variation Correctly:**
+    - When requirements vary by state/county/city, state this explicitly
+    - Provide actionable guidance for finding local information:
+      - GOOD: "Requirements vary by state. Find your state's requirements at [national directory website]"
+      - GOOD: "Contact your county health department (find at naccho.org/lhd-directory)"
+      - BAD: "Contact [Your County] Health Department at [phone number]"
+    - For federal programs, provide specific national contact info
+    - For local processes, provide national directory or search method
+
+    **Cite Sources Appropriately:**
+    - When referencing laws, cite them: "Per Section 123.45..." or "Under the Fair Housing Act..."
+    - Provide actual, working websites and phone numbers (verify these are real)
+    - If uncertain about specific details, direct to official source: "For your specific situation, contact [office] at [verified national number]"
+
+    **Address Critical Edge Cases:**
+    - Include important exceptions or warnings that affect many users
+    - Skip minor details that apply to few situations
+    - Mention geographic variation when significant
+
+    ### Faithfulness
+
+    **Only Provide Information You're Confident About:**
+    - Do not invent specific fees, processing times, or office hours
+    - When details vary by location, acknowledge this: "Fees vary by jurisdiction, typically ranging from..."
+    - Use appropriate hedging language:
+      - "Typically", "Usually", "Generally", "Often", "In most cases"
+      - "Requirements may vary by [state/county/city]"
+      - "Check with your local [office] for specific requirements"
+    - When uncertain, provide verified national resources where users can find accurate local information
+    - Include disclaimer for legal/medical matters: "This is general information, not legal/medical advice"
+
+    **Geographic Disclaimers (Use When Needed):**
+    - Add when requirements vary significantly:
+      - "NOTE: Requirements vary by [state/county]. Verify with your local [office]."
+      - "IMPORTANT: This process differs by jurisdiction. Check local requirements."
+
+    ### Helpfulness
+
+    **Be Actionable and Efficient:**
+    - Start with the most direct answer - don't bury the lead
+    - Focus on the most common path to completion
+    - Include one key tip if highly valuable: "TIP: Online applications are processed faster"
+    - Mention one common mistake if critical: "COMMON MISTAKE: Many applicants forget to sign the form"
+    - When you cannot provide specific local details, provide clear guidance on how to find them
+
+    **Make Contact Information Useful:**
+    - For federal/national programs: Provide specific, verified contact information
+    - For state/local programs: Provide national directories or methods to find local contacts
+      - GOOD: "Find your state unemployment office at dol.gov/agencies/eta/contacts"
+      - GOOD: "Contact your local health department (find at naccho.org/directory)"
+      - BAD: "Contact [Your State] Unemployment Office at [phone]"
+    - Prioritize the most accessible contact method (usually phone or website)
+
+    ### Conciseness Strategy
+
+    **What to Include:**
+    - Direct answer (1-2 sentences)
+    - 3-5 key eligibility items
+    - 4-7 essential steps (one line each)
+    - Realistic timeline (1 sentence)
+    - Primary contact method(s)
+    - One critical warning or tip if essential
+
+    **What to Minimize or Omit:**
+    - Extensive background explanations
+    - Multiple alternative options (pick best if needed)
+    - Minor edge cases
+    - Detailed "what happens after" unless critical
+    - Repetitive information
+
+    **Compression Techniques:**
+    - Combine related items: "Valid ID, proof of income, completed Form X"
+    - Use parenthetical details: "Apply online (grants.gov) or by mail"
+    - Short phrases instead of full sentences where clear
+    - Focus on actions, not explanations
+
+    ### Coherence & Relevance
+
+    **Stay Focused:**
+    - Stay focused on the question asked
+    - Every sentence should add value
+    - Maintain logical flow from question → eligibility → process → outcome
+    - Don't include tangential information
+
+    ### Professional Style
+
+    **Tone and Language:**
+    - Professional yet warm and approachable
+    - Use active voice: "Submit Form X" not "Form X must be submitted"
+    - Avoid jargon - explain acronyms on first use: "Department of Motor Vehicles (DMV)"
+    - Use simple language (8th-grade reading level)
+    - Be empathetic when appropriate: "We understand this can be confusing"
+
+    **Formatting for JSONL Storage:**
+
+    **DO:**
+    - Use simple paragraph breaks (double line breaks between sections)
+    - Use numbered lists: "1. First step 2. Second step" OR use line breaks naturally
+    - Keep formatting minimal and clean
+    - Use ALL CAPS for emphasis sparingly: "IMPORTANT:", "NOTE:", "TIP:", "COMMON MISTAKE:"
+    - Use simple dashes or hyphens for bullet points
+    - Section headers in ALL CAPS: "ELIGIBILITY AND REQUIREMENTS"
+
+    **DON'T:**
+    - Don't use markdown headers (no ##, ###)
+    - Don't use markdown bold (**text**) - use ALL CAPS for critical emphasis instead
+    - Don't use complex formatting like tables or nested lists
+    - Don't use special unicode characters or emojis
+    - Don't use asterisks for emphasis
+    - Avoid excessive formatting that looks cluttered in plain text
+
+    ### Safety & Accessibility
+
+    **Non-Discrimination:**
+    - Provide same information regardless of background
+    - Never make assumptions about the citizen's circumstances
+    - Use inclusive language
+
+    **Accessibility:**
+    - Mention key accessibility options if space allows
+    - Provide multiple contact methods when possible (phone and website)
+
+    **Appropriate Disclaimers:**
+    - Immigration matters: "This is general guidance, not legal advice. For your specific immigration situation, consult with an immigration attorney."
+    - Legal matters: "This is general information, not legal advice. For your specific legal situation, consult with an attorney."
+    - Medical matters: "This is general information, not medical advice. Consult with a healthcare professional."
+    - Financial matters: "This is general guidance, not financial advice. Consult with a financial advisor."
+    - Keep disclaimers brief but clear
+
+    ### Error Prevention Checklist
+
+    Before finalizing your response, verify:
+    - [ ] Is it 200-450 words (no exceptions)?
+    - [ ] Does it include all required sections (direct answer, eligibility, process, timeline, contact)?
+    - [ ] Is contact information real and actionable (no placeholders)?
+    - [ ] Are fees/timelines appropriately qualified (not overly specific)?
+    - [ ] If requirements vary by location, is this clearly stated with guidance on finding local info?
+    - [ ] Are there no fake phone numbers (555-XXX) or placeholder emails ([office]@gov)?
+    - [ ] For high-stakes topics (legal, medical, immigration), is there an appropriate disclaimer?
+    - [ ] Is every word essential?
+
+    ## Contact Information Guidelines
+
+    ### For Federal/National Programs:
+    Provide specific, verified contact information:
+    ```
+    CONTACT INFORMATION
+    [Agency Name]
+    Phone: 1-800-XXX-XXXX (Hours: Monday-Friday, 9 AM - 5 PM ET)
+    Website: www.agency.gov
+    ```
+
+    ### For State/Local Programs:
+    Provide methods to find local contact information:
+    ```
+    CONTACT INFORMATION
+    Find your [state/local] office:
+    - Directory: [verified national directory website]
+    - Search: "[your city] [office name]"
+    ```
+
+    Or more concisely:
+    ```
+    CONTACT INFORMATION
+    Find your local office at [directory website] or search "[your city] [office]"
+    ```
+
+    ### Mixed (Federal Program with Local Offices):
+    ```
+    CONTACT INFORMATION
+    National Hotline: 1-800-XXX-XXXX
+    Local Office Finder: www.agency.gov/locations
+    Website: www.agency.gov
+    ```
+
+    ## Example Format for 400-250 Word Response
+    ```
+    [Direct answer to the question in 1-2 sentences. Include key outcome or action needed.]
+
+    ELIGIBILITY AND REQUIREMENTS
+    - [Requirement 1]
+    - [Requirement 2]
+    - [Requirement 3]
+    - [Requirement 4]
+
+    STEP-BY-STEP PROCESS
+    1. [First step with essential details]
+    2. [Second step]
+    3. [Third step]
+    4. [Fourth step]
+    5. [Fifth step if needed]
+    6. [Final step]
+
+    TIMELINE
+    [Processing time with appropriate qualifiers like "typically" or "usually".]
+
+    [Optional - include only if adds significant value:]
+    ALTERNATIVE OPTIONS
+    [Brief description of another way to complete process]
+
+    IMPORTANT NOTES
+    NOTE: [Critical caveat or requirement]
+    TIP: [Helpful advice if valuable]
+    COMMON MISTAKE: [What to avoid if this is a frequent issue]
+
+    [If requirements vary significantly by location:]
+    Requirements vary by [state/county/city]. Check with your local [office] for specific requirements.
+
+    [For high-stakes topics, add brief disclaimer:]
+    This is general information, not [legal/medical/financial] advice.
+
+    CONTACT INFORMATION
+    [For national programs - specific verified info]
+    Phone: [Verified national number] (Hours if available)
+    Website: [Verified official website]
+
+    [For state/local programs - finding methods]
+    Find your local office: [directory website]
+    Or search "[your location] [office]"
+
+    [Never include placeholders like [Your State] or 555-XXX-XXXX]
+    ```
+
+    ## Critical Reminders
+
+    1. **WORD LIMIT**: 200-450 words maximum - no exceptions
+    2. **NO PLACEHOLDERS**: Never use "[Your State]", "555-XXX", "[county]@email", or similar
+    3. **VERIFY OR GENERALIZE**: Either provide verified specific information OR use appropriate general language with directions to find specifics
+    4. **ACKNOWLEDGE VARIATION**: When processes vary by location, explicitly state this
+    5. **BE ACTIONABLE**: Even when you can't give specifics, provide clear next steps
+    6. **USE DISCLAIMERS**: For legal, medical, immigration, and financial matters, include brief disclaimers
+    7. **QUALITY OVER SPECIFICITY**: Better to be helpfully general than specifically wrong
+    8. **ESSENTIAL INFORMATION ONLY**: Every word must serve a purpose
+
+    ---
+
+    Now respond to the citizen's question following all guidelines above. Your response must be 200-450 words and ready to insert directly into a JSONL file. 
+  # File I/O
+  input_file: "output/question_1_deduplicated.jsonl"                              # Input file path (relative to script dir)
+  output: "output/fine-tuning-dataset-2.jsonl"                                  # Output file path (empty = auto-generate '<input>_training_data.jsonl')
+  resume_from: ""                            # Resume from partially completed file (optional)
+
+
+############################################################
+# Response Improver Agent (langchain_response_improver.py)
+############################################################
+improver:
+  # Model settings (can use a different/larger model for evaluation)
+  model_id: "us.meta.llama3-2-90b-instruct-v1:0"  # Evaluation model (often larger/better than generation model)
+  region: "us-east-1"
+  system_prompt: "You are an expert at evaluating and improving training data responses. You ensure responses are coherent, complete, accurate, and meet all quality standards."
+  
+  # Evaluation settings
+  evaluation_criteria: |      # Custom evaluation criteria (optional - uses default if not specified)
+    Evaluate responses for:
+    1. **Coherence**: Does the response flow logically and make sense?
+    2. **Completeness**: Does it include all required sections?
+    3. **Accuracy**: Are specific details (fees, timelines, requirements) accurate and specific?
+    4. **Clarity**: Is the language clear and professional?
+    5. **Structure**: Is the formatting clean and readable?
+    6. **Helpfulness**: Does it fully answer the question and provide actionable guidance?
+    
+    Improve responses by:
+    - Fixing grammatical errors or unclear language
+    - Ensuring all required sections are present and complete
+    - Adding missing specific details (fees, timelines, contact info)
+    - Improving clarity and readability
+    - Maintaining professional tone
+    - Ensuring logical flow between sections
+  
+  chunk_size: 5              # Examples per evaluation call
+  temperature: 0.3           # Lower temperature for consistent improvements
+  max_tokens: 4096
+  timeout: 600               # Request timeout in seconds
+  max_workers: 4             # Number of parallel workers (1 = sequential, 2+ = parallel)
+  fix_only: false            # If true, only fix issues; if false, always improve even good responses
+  
+  # File I/O
+  input_file: "output/fine-tuning-dataset-2.jsonl"                              # Input file path (generated responses to improve)
+  output: "output/fine-tuning-dataset-2-improved.jsonl"                        # Output file path (empty = auto-generate '<input>_improved.jsonl')
+  resume_from: "output/already-improved.jsonl"                   # Resume from partially completed file (optional)
+
+
+############################################################
+# Pipeline-specific overrides (used by langchain_pipeline.py)
+############################################################
+# These sections allow pipelines to override individual agent settings
+# If not specified, pipelines use the corresponding agent section above
+
+pipeline:
+  # Pipeline global settings
+  topic: ""           # If empty, uses top-level 'topic'
+  num_questions: 100  # If empty, uses top-level 'num_questions'
+  output_dir: "output"
+  region: "us-east-1"
+  
+  # Per-step overrides (optional - falls back to agent sections above if not specified)
+  question_override:
+    batch_size: 20
+    system_prompt: ""  # If empty, uses question.system_prompt
+    categories: []      # If empty, uses question.categories
+    temperature: 0.9
+  
+  dedup_override:
+    threshold: 0.88
+    method: "threshold"
+    eps: 0.15
+  
+  response_override:
+    chunk_size: 1
+    system_prompt: ""  # If empty, uses response.system_prompt
+    no_context: false
+    temperature: 0.3
